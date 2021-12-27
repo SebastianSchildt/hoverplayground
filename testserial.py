@@ -22,7 +22,7 @@ pipe=queue.Queue()
 threading.Thread(target=serial_writer_run,args=(ser,pipe)).start()
 threading.Thread(target=serial_reader_run,args=(ser,None)).start()
 
-arduinoThread = SerialReader(pipe)
+arduinoThread = SerialReader("/dev/ttyACM1", pipe)
 arduinoThread.start()
 
 
