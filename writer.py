@@ -3,24 +3,28 @@
 import struct
 import time
 from queue import Empty
+from timeit import default_timer
 
 START_FRAME=int(0xABCD)
 
 #43981
 
 def serial_writer_run(ser, queue):
-    print("Init serial writer")
+    print(f"Init serial writer, pipe is {queue}")
     speed=steer=0
     commandFrame = struct.Struct('HhhH')
+    timelast=default_timer()
     while True:
         #try queue
         try:
             (sp, st)=queue.get_nowait()
+            #print(f"Data: {sp} {st}")
             if sp != speed or st != steer:
                 print(f"Sending new speed {sp} and steer {st} to serial")
             speed=sp
             steer=st
         except Empty:
+            time.sleep(0.1)
             pass
 
         c_speed=speed
@@ -38,6 +42,12 @@ def serial_writer_run(ser, queue):
         except:
             print(f"Error with {steer}, {speed}/{c_speed}, {checksum}")
             return
-        ser.write(data)
 
-        time.sleep(0.2)
+        #only write if last time more than 100ms in past
+        now=default_timer()
+        if (now-timelast) > 100e-03:
+            ser.write(data)
+            timelast=default_timer()
+        else:
+            #print("Wait")
+            pass

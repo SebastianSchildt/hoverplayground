@@ -7,6 +7,8 @@ import threading
 from writer import *
 from reader import *
 
+from read_port import SerialReader
+
 
 UART="/dev/ttyUSB0"
 #UART="/tmp/test"
@@ -20,12 +22,16 @@ pipe=queue.Queue()
 threading.Thread(target=serial_writer_run,args=(ser,pipe)).start()
 threading.Thread(target=serial_reader_run,args=(ser,None)).start()
 
+arduinoThread = SerialReader(pipe)
+arduinoThread.start()
+
 
 while (True):
-    speed = int(input("Enter target speed: "))
-    steer = int(input("Enter target steer: "))
-    print(f"Sending speed {speed} and steer {steer} to queue")
-    pipe.put((speed,steer))
+    time.sleep(1)
+    #speed = int(input("Enter target speed: "))
+    #steer = int(input("Enter target steer: "))
+    #print(f"Sending speed {speed} and steer {steer} to queue")
+    #pipe.put((speed,steer))
 
 
 

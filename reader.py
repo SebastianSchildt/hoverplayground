@@ -4,7 +4,6 @@ import struct
 import json
 from enum import Enum
 
-
 # typedef struct{
 #    uint16_t start;
 #    int16_t  cmd1;
