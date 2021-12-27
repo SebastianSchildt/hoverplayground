@@ -9,11 +9,11 @@ import queue
 data_set = {"a0": -1 , "a1": -1}
 
 class SerialReader(threading.Thread):
-    def __init__(self, pipe):
+    def __init__(self, port, pipe):
         threading.Thread.__init__(self)
         print(f"Init Arduino Reader, pipe is {pipe} ")
 
-        self.port = serial.Serial('/dev/ttyACM0')
+        self.port = serial.Serial(port)
         self.pipe=pipe
         self.exitFlag = False
         self.exitMutex = threading.Lock()
@@ -23,7 +23,6 @@ class SerialReader(threading.Thread):
     def run(self):
         port = self.port
 
-
         while True:
             # see whether an exit was requested
             with self.exitMutex:
@@ -31,49 +30,36 @@ class SerialReader(threading.Thread):
                     break
             with self.dataMutex:
                 self.data = port.readline().decode("utf-8")
-                self.emitNewData(self.data)
+            self.emitNewData(self.data, 500)
 
 
-    def emitNewData(self,rxdata):
-        json_data=json.loads(rxdata)
-        l_speed=json_data["a0"]
-        r_speed=json_data["a1"]
-        self.pipe.put( (int(l_speed),0))
+    def emitNewData(self,rxdata, range): # set scale
+        a0, a1 = self.get(rxdata, range)
+        self.pipe.put( (int(a0), int(a1)) )
 
-
-    def get(self):
+    def get(self, raw_data, range, range_raw = 1000):
         with self.dataMutex:  # lock the buffer and copy the requested data out
-            get_data = json.loads(self.data)
-        print("ao: ", get_data["a0"])
-        print("a1: ", get_data["a1"])
-        return get_data
+            get_data = json.loads(raw_data)
+        a0 = get_data["a0"] *range / range_raw
+        a1 = get_data["a1"] *range / range_raw
+        return (a0, a1)
 
     def exit(self):
         """ Instruct the serial thread to exit."""
         with self.exitMutex:
             self.exitFlag = True
 
-def convert_speed_angular(a0, a1, max_speed, sport_mode = False):
-    if not sport_mode:
-        max = max_speed /2
-    else:
-        max = max_speed
-    return speed, angular
-
-
 if __name__ == "__main__":
 
     # Create thread to read and buffer serial data.
     pipe=queue.Queue()
-    thread = SerialReader(pipe)
+    thread = SerialReader("/dev/ttyACM1", pipe)
     thread.start()
 
     while True:
         try:
             (sp, st)=pipe.get()
             print(f"Received {sp}, {st}")
-
-            #thread.get()
         except KeyboardInterrupt:
             print("Keyboard Interrupt")
             thread.exit()
