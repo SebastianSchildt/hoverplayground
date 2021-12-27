@@ -2,6 +2,8 @@
 
 import struct
 import json
+from enum import Enum
+
 
 # typedef struct{
 #    uint16_t start;
@@ -17,45 +19,45 @@ import json
 # 18 bytes
 
 
-
-
-from enum import Enum
-
 class ParserState(Enum):
     WAIT_START1 = 1
     WAIT_START2 = 2
     PAYLOAD     = 3
 
-START_FRAME_1=int(0xAB)    
-START_FRAME_2=int(0xCD)    
+START_FRAME_1=int(0xCD)
+START_FRAME_2=int(0xAB)
 
 
-def parse_frame(data, out):
+def parse_frame(dataBytes, out):
     rxFrame = struct.Struct('HhhhhhhHH')
-    data=rxFrame.unpack(data)
-    checksum=data[0]^data[1]^data[2]^data[3]^data[4]^data[5]^data[6]^data[7]
-    data={}
+    checksumFrame = struct.Struct('HHHHHHHHH')
+    data=rxFrame.unpack(dataBytes)
+    checksumData = checksumFrame.unpack(dataBytes)
+
+    checksum=checksumData[0]^checksumData[1]^checksumData[2]^checksumData[3]^checksumData[4]^checksumData[5]^checksumData[6]^checksumData[7]
+
+    parsed_data={}
 
 
-    data["cmd1"]=data[1]
-    data["cmd2"]=data[2]
-    data["speedR_meas"]=data[3]
-    data["speedL_meas"]=data[4]
-    data["batVoltage"]=data[5]
-    data["boardTemp"]=data[6]
-    data["cmdLed"]=data[7]
-    data["checksum"]=data[8]
+    parsed_data["cmd1"]=data[1]
+    parsed_data["cmd2"]=data[2]
+    parsed_data["speedR_meas"]=data[3]
+    parsed_data["speedL_meas"]=data[4]
+    parsed_data["batVoltage"]=data[5]
+    parsed_data["boardTemp"]=data[6]
+    parsed_data["cmdLed"]=data[7]
+    parsed_data["checksum"]=data[8]
 
 
     if checksum != data[8]:
         print(f"Checksum error {checksum} != {data[8]}")
-        data["checksumOk"]=f"Checksum error {checksum} != {data[8]}"
+        parsed_data["checksumOk"]=f"Checksum error {checksum} != {data[8]}"
     else:
-        data["checksumOk"]="yes"
+        parsed_data["checksumOk"]="yes"
 
 
-    json=json.dumps(data, sort_keys=True, indent=4)
-    out.write(json)
+    jsondata=json.dumps(parsed_data, sort_keys=True, indent=4)
+    out.write(jsondata)
     out.write("\n")
     out.flush()
 
@@ -74,29 +76,30 @@ def serial_reader_run(ser, queue):
 
     while True:
         b=ser.read(size=1)
-        print(f'Received {b}')
-        
+
         if len(b) != 1:
             continue
-        
-        print(f'Received {b}')
+
+        #print(f'Received {b}')
         if state == ParserState.WAIT_START1:
             if b[0] == START_FRAME_1:
+                #print("Start1 to 2")
                 state=ParserState.WAIT_START2
         elif state == ParserState.WAIT_START2:
             if b[0] == START_FRAME_2:
+                #print("Start2 to payload")
                 state=ParserState.PAYLOAD
                 dataPtr=2
             else:
+                #print(f"Reset. {b[0]} != {START_FRAME_2} ")
                 state=ParserState.WAIT_START1
         elif state == ParserState.PAYLOAD:
-            SerialFrame=[dataPtr]=b[0]
+            SerialFrame[dataPtr]=b[0]
             dataPtr+=1
             if dataPtr==18:
+                #print("Parsing")
                 state=ParserState.WAIT_START1
                 parse_frame(SerialFrame,fout)
         else:
             print("Parser foobar. Resetting")
             state=ParserState.WAIT_START1
-
-

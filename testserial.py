@@ -8,9 +8,9 @@ from writer import *
 from reader import *
 
 
-UART="/dev/pts/4"
+UART="/dev/ttyUSB0"
 #UART="/tmp/test"
- 	
+
 
 print("Test serial")
 
@@ -35,6 +35,3 @@ while (True):
 #   int16_t  steer;
 #   int16_t  speed;
 #   uint16_t checksum;
-
-
-
