@@ -24,7 +24,7 @@ def serial_writer_run(ser, queue):
             speed=sp
             steer=st
         except Empty:
-            time.sleep(0.1)
+            time.sleep(0.01)
             pass
 
         c_speed=speed
@@ -45,7 +45,7 @@ def serial_writer_run(ser, queue):
 
         #only write if last time more than 100ms in past
         now=default_timer()
-        if (now-timelast) > 100e-03:
+        if (now-timelast) > 10e-03:
             ser.write(data)
             timelast=default_timer()
         else:
