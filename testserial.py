@@ -5,7 +5,8 @@ import queue
 import threading
 
 from writer import *
-from reader import *
+# from reader import *
+from hovercar_parser.parse_hoverdata import serial_reader_run
 
 from read_port import SerialReader
 import argparse
@@ -27,7 +28,7 @@ ser = serial.Serial(UART, 115200, timeout=None)  # open serial port
 pipe=queue.Queue()
 
 threading.Thread(target=serial_writer_run,args=(ser,pipe)).start()
-threading.Thread(target=serial_reader_run,args=(ser,None)).start()
+threading.Thread(target=serial_reader_run,args=(ser, None, "log/hoverinfo.yaml")).start()
 
 arduinoThread = SerialReader(arduino_port, pipe)
 arduinoThread.start()
